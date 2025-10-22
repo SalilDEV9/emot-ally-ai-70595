@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Mic, Video } from "lucide-react";
+import { Send, Mic, Video, MicOff, VideoOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import MentoraAvatar from "./MentoraAvatar";
 import EmotionBubble from "./EmotionBubble";
 import MessageList from "./MessageList";
+import { AudioRecorder } from "@/utils/audioRecorder";
 
 interface Message {
   id: string;
@@ -29,22 +31,103 @@ const ChatInterface = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const { toast } = useToast();
+  const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoStreamRef = useRef<MediaStream | null>(null);
 
-  const handleVoiceToggle = () => {
-    setIsRecording(!isRecording);
-    toast({
-      title: isRecording ? "Voice Disabled" : "Voice Enabled",
-      description: isRecording ? "Microphone access disabled" : "Microphone access enabled - speak to Mentora",
-    });
+  const handleVoiceToggle = async () => {
+    if (isRecording) {
+      try {
+        const base64Audio = await audioRecorderRef.current?.stop();
+        setIsRecording(false);
+        
+        if (base64Audio) {
+          setIsLoading(true);
+          const { data, error } = await supabase.functions.invoke('voice-to-text', {
+            body: { audio: base64Audio }
+          });
+
+          if (error) throw error;
+          
+          if (data?.text) {
+            setInput(data.text);
+            toast({
+              title: "Transcription Complete",
+              description: "Your voice has been converted to text",
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error transcribing audio:', error);
+        toast({
+          title: "Transcription Error",
+          description: "Failed to convert voice to text",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      try {
+        audioRecorderRef.current = new AudioRecorder();
+        await audioRecorderRef.current.start();
+        setIsRecording(true);
+        toast({
+          title: "Recording Started",
+          description: "Speak now - click again to transcribe",
+        });
+      } catch (error) {
+        console.error('Error starting recording:', error);
+        toast({
+          title: "Recording Error",
+          description: "Could not access microphone",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
-  const handleCameraToggle = () => {
-    setIsCameraOn(!isCameraOn);
-    toast({
-      title: isCameraOn ? "Camera Disabled" : "Camera Enabled",
-      description: isCameraOn ? "Camera access disabled" : "Camera will analyze your facial expressions",
-    });
+  const handleCameraToggle = async () => {
+    if (isCameraOn) {
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach(track => track.stop());
+        videoStreamRef.current = null;
+      }
+      setIsCameraOn(false);
+      toast({
+        title: "Camera Disabled",
+        description: "Camera access disabled",
+      });
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        videoStreamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+        setIsCameraOn(true);
+        toast({
+          title: "Camera Enabled",
+          description: "Mentora can now see your facial expressions",
+        });
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        toast({
+          title: "Camera Error",
+          description: "Could not access camera",
+          variant: "destructive",
+        });
+      }
+    }
   };
+
+  useEffect(() => {
+    return () => {
+      if (videoStreamRef.current) {
+        videoStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -123,22 +206,44 @@ const ChatInterface = () => {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left side - Avatar */}
-      <div className="w-1/3 bg-card/30 backdrop-blur-sm border-r border-border/50 flex flex-col items-center justify-center p-8">
-        <MentoraAvatar emotion={currentEmotion} isSpeaking={isLoading} />
-        <EmotionBubble emotion={currentEmotion} />
+      {/* Left side - Avatar & Camera */}
+      <div className="w-1/3 bg-card/30 backdrop-blur-sm border-r border-border/50 flex flex-col items-center justify-center p-8 relative">
+        {isCameraOn && (
+          <div className="absolute inset-0 flex items-center justify-center p-8">
+            <div className="relative w-full max-w-md aspect-video rounded-3xl overflow-hidden border-2 border-secondary/30 shadow-glow">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute top-4 right-4">
+                <div className="bg-red-500 w-3 h-3 rounded-full animate-pulse" />
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {!isCameraOn && (
+          <>
+            <MentoraAvatar emotion={currentEmotion} isSpeaking={isLoading} />
+            <EmotionBubble emotion={currentEmotion} />
+          </>
+        )}
         
         {/* Mode buttons */}
-        <div className="mt-8 flex gap-4">
+        <div className="mt-8 flex gap-4 relative z-10">
           <Button
             variant="outline"
             size="lg"
             onClick={handleVoiceToggle}
+            disabled={isLoading}
             className={`rounded-full w-16 h-16 border-secondary/50 hover:shadow-glow-secondary transition-all ${
               isRecording ? "bg-secondary/20 shadow-glow-secondary animate-pulse" : ""
             }`}
           >
-            <Mic className={`w-6 h-6 ${isRecording ? "text-secondary" : ""}`} />
+            {isRecording ? <MicOff className="w-6 h-6 text-secondary" /> : <Mic className="w-6 h-6" />}
           </Button>
           <Button
             variant="outline"
@@ -148,7 +253,7 @@ const ChatInterface = () => {
               isCameraOn ? "bg-secondary/20 shadow-glow-secondary animate-pulse" : ""
             }`}
           >
-            <Video className={`w-6 h-6 ${isCameraOn ? "text-secondary" : ""}`} />
+            {isCameraOn ? <VideoOff className="w-6 h-6 text-secondary" /> : <Video className="w-6 h-6" />}
           </Button>
         </div>
       </div>
