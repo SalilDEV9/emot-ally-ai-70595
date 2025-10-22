@@ -26,7 +26,25 @@ const ChatInterface = () => {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState("calm");
+  const [isRecording, setIsRecording] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(false);
   const { toast } = useToast();
+
+  const handleVoiceToggle = () => {
+    setIsRecording(!isRecording);
+    toast({
+      title: isRecording ? "Voice Disabled" : "Voice Enabled",
+      description: isRecording ? "Microphone access disabled" : "Microphone access enabled - speak to Mentora",
+    });
+  };
+
+  const handleCameraToggle = () => {
+    setIsCameraOn(!isCameraOn);
+    toast({
+      title: isCameraOn ? "Camera Disabled" : "Camera Enabled",
+      description: isCameraOn ? "Camera access disabled" : "Camera will analyze your facial expressions",
+    });
+  };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -115,16 +133,22 @@ const ChatInterface = () => {
           <Button
             variant="outline"
             size="lg"
-            className="rounded-full w-16 h-16 border-secondary/50 hover:shadow-glow-secondary"
+            onClick={handleVoiceToggle}
+            className={`rounded-full w-16 h-16 border-secondary/50 hover:shadow-glow-secondary transition-all ${
+              isRecording ? "bg-secondary/20 shadow-glow-secondary animate-pulse" : ""
+            }`}
           >
-            <Mic className="w-6 h-6" />
+            <Mic className={`w-6 h-6 ${isRecording ? "text-secondary" : ""}`} />
           </Button>
           <Button
             variant="outline"
             size="lg"
-            className="rounded-full w-16 h-16 border-secondary/50 hover:shadow-glow-secondary"
+            onClick={handleCameraToggle}
+            className={`rounded-full w-16 h-16 border-secondary/50 hover:shadow-glow-secondary transition-all ${
+              isCameraOn ? "bg-secondary/20 shadow-glow-secondary animate-pulse" : ""
+            }`}
           >
-            <Video className="w-6 h-6" />
+            <Video className={`w-6 h-6 ${isCameraOn ? "text-secondary" : ""}`} />
           </Button>
         </div>
       </div>
