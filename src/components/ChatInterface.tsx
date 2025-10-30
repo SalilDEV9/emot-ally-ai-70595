@@ -291,7 +291,11 @@ const ChatInterface = () => {
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover scale-x-[-1]"
+                onLoadedMetadata={(e) => {
+                  const video = e.currentTarget;
+                  video.play().catch(err => console.error('Video play error:', err));
+                }}
               />
               <div className="absolute top-4 right-4">
                 <div className="bg-red-500 w-3 h-3 rounded-full animate-pulse" />
