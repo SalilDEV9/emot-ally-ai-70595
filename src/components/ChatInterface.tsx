@@ -100,10 +100,18 @@ const ChatInterface = () => {
       });
     } else {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          video: { 
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+            facingMode: "user"
+          } 
+        });
         videoStreamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          // Explicitly start video playback
+          await videoRef.current.play();
         }
         setIsCameraOn(true);
         toast({
