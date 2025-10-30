@@ -94,6 +94,9 @@ const ChatInterface = () => {
         videoStreamRef.current.getTracks().forEach(track => track.stop());
         videoStreamRef.current = null;
       }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
       setIsCameraOn(false);
       toast({
         title: "Camera Disabled",
@@ -101,6 +104,7 @@ const ChatInterface = () => {
       });
     } else {
       try {
+        console.log('Requesting camera access...');
         const stream = await navigator.mediaDevices.getUserMedia({ 
           video: { 
             width: { ideal: 1280 },
@@ -108,12 +112,26 @@ const ChatInterface = () => {
             facingMode: "user"
           } 
         });
+        console.log('Camera stream obtained:', stream);
+        
         videoStreamRef.current = stream;
+        
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          // Explicitly start video playback
-          await videoRef.current.play();
+          console.log('Video srcObject set');
+          
+          // Wait for video to be ready and play it
+          videoRef.current.onloadedmetadata = async () => {
+            try {
+              console.log('Video metadata loaded, attempting play...');
+              await videoRef.current!.play();
+              console.log('Video playing successfully');
+            } catch (playError) {
+              console.error('Error playing video:', playError);
+            }
+          };
         }
+        
         setIsCameraOn(true);
         toast({
           title: "Camera Enabled",
@@ -123,7 +141,7 @@ const ChatInterface = () => {
         console.error('Error accessing camera:', error);
         toast({
           title: "Camera Error",
-          description: "Could not access camera",
+          description: "Could not access camera - please allow camera permissions",
           variant: "destructive",
         });
       }
