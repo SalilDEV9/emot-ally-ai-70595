@@ -302,21 +302,17 @@ const ChatInterface = () => {
       {/* Left side - Avatar & Camera */}
       <div className="w-1/3 bg-card/30 backdrop-blur-sm border-r border-border/50 flex flex-col items-center justify-center p-8 relative">
         {isCameraOn && (
-          <div className="absolute inset-0 flex items-center justify-center p-8">
-            <div className="relative w-full max-w-md aspect-video rounded-3xl overflow-hidden border-2 border-secondary/30 shadow-glow">
+          <div className="absolute inset-0 flex items-center justify-center p-8 z-10">
+            <div className="relative w-full max-w-md aspect-video rounded-3xl overflow-hidden border-2 border-secondary/30 shadow-glow bg-black">
               <video
                 ref={videoRef}
                 autoPlay
                 playsInline
                 muted
                 className="w-full h-full object-cover scale-x-[-1]"
-                onLoadedMetadata={(e) => {
-                  const video = e.currentTarget;
-                  video.play().catch(err => console.error('Video play error:', err));
-                }}
               />
-              <div className="absolute top-4 right-4">
-                <div className="bg-red-500 w-3 h-3 rounded-full animate-pulse" />
+              <div className="absolute top-4 right-4 z-10">
+                <div className="bg-red-500 w-3 h-3 rounded-full animate-pulse shadow-lg" />
               </div>
             </div>
           </div>
