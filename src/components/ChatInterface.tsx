@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Mic, Video, MicOff, VideoOff } from "lucide-react";
+import { Send, Mic, Video, MicOff, VideoOff, Scan } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import MentoraAvatar from "./MentoraAvatar";
@@ -34,6 +34,7 @@ const ChatInterface = () => {
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const handleVoiceToggle = async () => {
     if (isRecording) {
@@ -136,6 +137,72 @@ const ChatInterface = () => {
       }
     };
   }, []);
+
+  const analyzeFacialEmotion = async () => {
+    if (!videoRef.current || !isCameraOn) {
+      toast({
+        title: "Camera Not Active",
+        description: "Please enable your camera first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    
+    try {
+      // Capture frame from video
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) throw new Error('Could not get canvas context');
+      
+      ctx.drawImage(videoRef.current, 0, 0);
+      const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+      toast({
+        title: "Analyzing Your Expression",
+        description: "Mentora is reading your emotions...",
+      });
+
+      // Send to analysis endpoint
+      const { data, error } = await supabase.functions.invoke('analyze-emotion', {
+        body: { 
+          image: imageData,
+          type: 'facial'
+        }
+      });
+
+      if (error) throw error;
+
+      // Add analysis result to chat
+      const analysisMessage: Message = {
+        id: Date.now().toString(),
+        role: "assistant",
+        content: `**Emotion Detected: ${data.emotion.charAt(0).toUpperCase() + data.emotion.slice(1)}** (${data.confidence}% confidence)\n\n${data.observation}\n\n💡 ${data.suggestion}`,
+        emotion: data.emotion,
+      };
+
+      setMessages((prev) => [...prev, analysisMessage]);
+      setCurrentEmotion(data.emotion);
+
+      toast({
+        title: "Analysis Complete",
+        description: `Detected: ${data.emotion}`,
+      });
+    } catch (error) {
+      console.error('Error analyzing facial emotion:', error);
+      toast({
+        title: "Analysis Error",
+        description: "Failed to analyze facial expression",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const sendMessage = async () => {
     if (!input.trim()) return;
@@ -250,6 +317,7 @@ const ChatInterface = () => {
             className={`rounded-full w-16 h-16 border-secondary/50 hover:shadow-glow-secondary transition-all ${
               isRecording ? "bg-secondary/20 shadow-glow-secondary animate-pulse" : ""
             }`}
+            title="Voice Input"
           >
             {isRecording ? <MicOff className="w-6 h-6 text-secondary" /> : <Mic className="w-6 h-6" />}
           </Button>
@@ -260,9 +328,22 @@ const ChatInterface = () => {
             className={`rounded-full w-16 h-16 border-secondary/50 hover:shadow-glow-secondary transition-all ${
               isCameraOn ? "bg-secondary/20 shadow-glow-secondary animate-pulse" : ""
             }`}
+            title="Camera"
           >
             {isCameraOn ? <VideoOff className="w-6 h-6 text-secondary" /> : <Video className="w-6 h-6" />}
           </Button>
+          {isCameraOn && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={analyzeFacialEmotion}
+              disabled={isAnalyzing || isLoading}
+              className="rounded-full w-16 h-16 border-primary/50 hover:shadow-glow bg-primary/10 animate-fade-in"
+              title="Analyze Face"
+            >
+              <Scan className={`w-6 h-6 text-primary ${isAnalyzing ? 'animate-pulse' : ''}`} />
+            </Button>
+          )}
         </div>
       </div>
 
