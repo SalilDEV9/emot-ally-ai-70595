@@ -115,24 +115,8 @@ const ChatInterface = () => {
         console.log('Camera stream obtained:', stream);
         
         videoStreamRef.current = stream;
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          console.log('Video srcObject set');
-          
-          // Wait for video to be ready and play it
-          videoRef.current.onloadedmetadata = async () => {
-            try {
-              console.log('Video metadata loaded, attempting play...');
-              await videoRef.current!.play();
-              console.log('Video playing successfully');
-            } catch (playError) {
-              console.error('Error playing video:', playError);
-            }
-          };
-        }
-        
         setIsCameraOn(true);
+        
         toast({
           title: "Camera Enabled",
           description: "Mentora can now see your facial expressions",
@@ -147,6 +131,19 @@ const ChatInterface = () => {
       }
     }
   };
+
+  // Set up video stream when camera is enabled
+  useEffect(() => {
+    if (isCameraOn && videoRef.current && videoStreamRef.current) {
+      console.log('Setting video srcObject...');
+      videoRef.current.srcObject = videoStreamRef.current;
+      videoRef.current.play().then(() => {
+        console.log('Video playing successfully');
+      }).catch(err => {
+        console.error('Error playing video:', err);
+      });
+    }
+  }, [isCameraOn]);
 
   useEffect(() => {
     return () => {
@@ -170,15 +167,22 @@ const ChatInterface = () => {
     
     try {
       // Capture frame from video
+      const video = videoRef.current;
+      if (!video.videoWidth || !video.videoHeight) {
+        throw new Error('Video not ready - no video dimensions');
+      }
+
       const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
       
       if (!ctx) throw new Error('Could not get canvas context');
       
-      ctx.drawImage(videoRef.current, 0, 0);
+      ctx.drawImage(video, 0, 0);
       const imageData = canvas.toDataURL('image/jpeg', 0.8);
+
+      console.log('Image captured, size:', imageData.length);
 
       toast({
         title: "Analyzing Your Expression",
