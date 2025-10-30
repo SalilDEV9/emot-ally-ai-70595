@@ -51,13 +51,17 @@ export default {
       backgroundImage: {
         'gradient-calm': 'linear-gradient(135deg, hsl(var(--gradient-calm-start)), hsl(var(--gradient-calm-end)))',
         'gradient-happy': 'linear-gradient(135deg, hsl(var(--gradient-happy-start)), hsl(var(--gradient-happy-end)))',
+        'gradient-sad': 'linear-gradient(135deg, hsl(var(--gradient-sad-start)), hsl(var(--gradient-sad-end)))',
+        'gradient-anxious': 'linear-gradient(135deg, hsl(var(--gradient-anxious-start)), hsl(var(--gradient-anxious-end)))',
         'gradient-focus': 'linear-gradient(180deg, hsl(var(--gradient-focus-start)), hsl(var(--gradient-focus-end)))',
-        'gradient-radial': 'radial-gradient(circle at center, hsl(var(--glow-primary) / 0.2), transparent)',
+        'gradient-radial': 'radial-gradient(circle at center, hsl(var(--glow-primary) / 0.3), transparent)',
       },
       boxShadow: {
-        'glow': '0 0 40px hsl(var(--glow-primary) / 0.3)',
-        'glow-lg': '0 0 60px hsl(var(--glow-primary) / 0.4)',
-        'glow-secondary': '0 0 40px hsl(var(--glow-secondary) / 0.3)',
+        'glow': '0 0 50px hsl(var(--glow-primary) / 0.4), 0 0 100px hsl(var(--glow-primary) / 0.2)',
+        'glow-lg': '0 0 80px hsl(var(--glow-primary) / 0.5), 0 0 120px hsl(var(--glow-primary) / 0.3)',
+        'glow-secondary': '0 0 50px hsl(var(--glow-secondary) / 0.4), 0 0 100px hsl(var(--glow-secondary) / 0.2)',
+        'glow-happy': '0 0 50px hsl(var(--glow-happy) / 0.5)',
+        'glow-sad': '0 0 50px hsl(var(--glow-sad) / 0.4)',
       },
       fontFamily: {
         sans: ['Poppins', 'sans-serif'],
