@@ -22,18 +22,24 @@ serve(async (req) => {
     const messages: any[] = [];
 
     if (type === 'facial' && image) {
-      analysisPrompt = `Analyze the facial expression in this image. Detect the primary emotion (happy, sad, anxious, calm, angry, neutral) and provide:
-1. The detected emotion
-2. Confidence level (0-100%)
-3. Brief empathetic observation (2-3 sentences)
-4. A gentle supportive suggestion
+      analysisPrompt = `You are an expert emotion recognition AI. Analyze this facial expression image with extreme precision.
 
-Format as JSON:
+Detect the PRIMARY emotion from: happy, sad, anxious, calm, angry, neutral
+
+Key indicators:
+- HAPPY: Smile, raised cheeks, crinkled eyes, relaxed forehead
+- SAD: Downturned mouth, drooping eyes, furrowed brow, tears
+- ANXIOUS: Tense jaw, wide eyes, raised eyebrows, rigid expression  
+- CALM: Relaxed features, soft eyes, neutral mouth, peaceful expression
+- ANGRY: Furrowed brow, narrowed eyes, tense jaw, flared nostrils
+- NEUTRAL: No strong expression, balanced features
+
+Provide accurate analysis in JSON:
 {
-  "emotion": "emotion_name",
+  "emotion": "exact_emotion_name",
   "confidence": 85,
-  "observation": "your observation",
-  "suggestion": "your suggestion"
+  "observation": "specific details about what you see in their expression",
+  "suggestion": "gentle supportive advice based on detected emotion"
 }`;
 
       messages.push({
@@ -44,14 +50,24 @@ Format as JSON:
         ]
       });
     } else if (type === 'voice' && audio) {
-      analysisPrompt = `Analyze the emotional tone from this voice transcription: "${audio}". Detect the primary emotion and provide empathetic feedback.
+      analysisPrompt = `You are an empathetic AI analyzing text for emotional content.
+
+Analyze this message: "${audio}"
+
+Detect the PRIMARY emotion from: happy, sad, anxious, calm, angry, neutral
+
+Look for:
+- Word choice (positive vs negative)
+- Intensity of language
+- Topics discussed
+- Tone indicators
 
 Format as JSON:
 {
-  "emotion": "emotion_name",
+  "emotion": "exact_emotion_name",
   "confidence": 85,
-  "observation": "your observation",
-  "suggestion": "your suggestion"
+  "observation": "what the text reveals about their emotional state",
+  "suggestion": "supportive response based on emotion"
 }`;
 
       messages.push({

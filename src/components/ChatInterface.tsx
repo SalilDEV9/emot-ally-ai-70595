@@ -240,6 +240,10 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     try {
+      // Detect emotion from user's message
+      const userEmotion = await detectEmotionFromUserInput(input);
+      setCurrentEmotion(userEmotion);
+
       // Call the AI edge function
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`,
@@ -263,17 +267,15 @@ const ChatInterface = () => {
       }
 
       const data = await response.json();
-      const emotion = detectEmotion(data.message);
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: data.message,
-        emotion,
+        emotion: currentEmotion,  // Keep the same emotion as detected from user
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-      setCurrentEmotion(emotion);
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -286,19 +288,26 @@ const ChatInterface = () => {
     }
   };
 
-  const detectEmotion = (text: string): string => {
-    // Simple emotion detection based on keywords
-    const lowerText = text.toLowerCase();
-    if (lowerText.includes("great") || lowerText.includes("wonderful") || lowerText.includes("happy")) {
-      return "happy";
-    } else if (lowerText.includes("calm") || lowerText.includes("peaceful") || lowerText.includes("relax")) {
-      return "calm";
-    } else if (lowerText.includes("sad") || lowerText.includes("down") || lowerText.includes("low")) {
-      return "sad";
-    } else if (lowerText.includes("anxious") || lowerText.includes("worried") || lowerText.includes("stress")) {
-      return "anxious";
+  const detectEmotionFromUserInput = async (text: string): Promise<string> => {
+    try {
+      // Use AI to detect emotion from user's message
+      const { data, error } = await supabase.functions.invoke('analyze-emotion', {
+        body: { 
+          audio: text,  // Using 'audio' field for text analysis
+          type: 'voice'
+        }
+      });
+      
+      if (error || !data) {
+        console.error('Emotion detection error:', error);
+        return 'calm';
+      }
+      
+      return data.emotion || 'calm';
+    } catch (error) {
+      console.error('Error detecting emotion:', error);
+      return 'calm';
     }
-    return "calm";
   };
 
   return (
