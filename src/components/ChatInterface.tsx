@@ -229,10 +229,12 @@ const ChatInterface = () => {
   const sendMessage = async () => {
     if (!input.trim()) return;
 
+    const userText = input.trim(); // Save input before clearing
+    
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content: input,
+      content: userText,
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -240,8 +242,10 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     try {
-      // Detect emotion from user's message
-      const userEmotion = await detectEmotionFromUserInput(input);
+      // Detect emotion from user's message FIRST
+      console.log('Detecting emotion from user message:', userText);
+      const userEmotion = await detectEmotionFromUserInput(userText);
+      console.log('Detected emotion:', userEmotion);
       setCurrentEmotion(userEmotion);
 
       // Call the AI edge function
@@ -290,6 +294,8 @@ const ChatInterface = () => {
 
   const detectEmotionFromUserInput = async (text: string): Promise<string> => {
     try {
+      console.log('Calling analyze-emotion edge function with text:', text);
+      
       // Use AI to detect emotion from user's message
       const { data, error } = await supabase.functions.invoke('analyze-emotion', {
         body: { 
@@ -298,12 +304,25 @@ const ChatInterface = () => {
         }
       });
       
-      if (error || !data) {
+      console.log('Analyze-emotion response:', { data, error });
+      
+      if (error) {
         console.error('Emotion detection error:', error);
+        toast({
+          title: "Emotion Detection Issue",
+          description: "Using default emotion detection",
+          variant: "destructive",
+        });
         return 'calm';
       }
       
-      return data.emotion || 'calm';
+      if (!data || !data.emotion) {
+        console.error('No emotion data received:', data);
+        return 'calm';
+      }
+      
+      console.log('Successfully detected emotion:', data.emotion);
+      return data.emotion;
     } catch (error) {
       console.error('Error detecting emotion:', error);
       return 'calm';
