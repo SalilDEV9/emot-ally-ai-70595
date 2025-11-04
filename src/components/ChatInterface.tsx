@@ -370,7 +370,12 @@ const ChatInterface = () => {
         body: { text, voice: 'alloy' }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('TTS error:', error);
+        // Keep speaking animation for visual feedback even if TTS fails
+        setTimeout(() => setIsSpeaking(false), 2000);
+        return;
+      }
 
       if (data?.audioContent) {
         // Convert base64 to audio and play
@@ -382,13 +387,19 @@ const ChatInterface = () => {
         
         if (audioRef.current) {
           audioRef.current.src = audioUrl;
+          audioRef.current.onended = () => setIsSpeaking(false);
+          audioRef.current.onerror = () => setIsSpeaking(false);
           await audioRef.current.play();
+        } else {
+          setIsSpeaking(false);
         }
+      } else {
+        setIsSpeaking(false);
       }
     } catch (error) {
       console.error('Error speaking text:', error);
-    } finally {
-      setIsSpeaking(false);
+      // Keep animation briefly even on error
+      setTimeout(() => setIsSpeaking(false), 2000);
     }
   };
 
@@ -427,7 +438,7 @@ const ChatInterface = () => {
         )}
         
         {/* Hidden audio element for TTS */}
-        <audio ref={audioRef} className="hidden" onEnded={() => setIsSpeaking(false)} />
+        <audio ref={audioRef} className="hidden" />
         
         {/* Mode buttons */}
         <div className="mt-8 flex gap-4 relative z-10">
