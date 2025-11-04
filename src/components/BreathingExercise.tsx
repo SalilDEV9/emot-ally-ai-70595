@@ -63,7 +63,7 @@ const BreathingExercise = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-background to-card p-8">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-background to-card p-8 pb-32">
       <div className="max-w-2xl w-full space-y-12">
         {/* Breathing Circle */}
         <div className="relative flex items-center justify-center h-96">

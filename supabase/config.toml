@@ -1,1 +1,13 @@
 project_id = "amgvvvvvpcgyxmcjhkzk"
+
+[functions.analyze-emotion]
+verify_jwt = false
+
+[functions.chat]
+verify_jwt = false
+
+[functions.voice-to-text]
+verify_jwt = false
+
+[functions.text-to-speech]
+verify_jwt = false

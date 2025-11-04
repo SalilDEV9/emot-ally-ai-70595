@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Mic, Video, MicOff, VideoOff, Scan } from "lucide-react";
+import { Send, Mic, Video, MicOff, VideoOff, Scan, Volume2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import MentoraAvatar from "./MentoraAvatar";
@@ -35,6 +35,8 @@ const ChatInterface = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleVoiceToggle = async () => {
     if (isRecording) {
@@ -280,6 +282,9 @@ const ChatInterface = () => {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+      
+      // Speak the response
+      await speakText(data.message);
     } catch (error) {
       console.error("Error sending message:", error);
       toast({
@@ -289,6 +294,30 @@ const ChatInterface = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const saveMoodEntry = async (emotion: string, confidence: number, note: string) => {
+    try {
+      // Use a placeholder user_id since auth is not implemented yet
+      const placeholderUserId = '00000000-0000-0000-0000-000000000000';
+      
+      const { error } = await supabase
+        .from('mood_entries')
+        .insert({
+          emotion,
+          confidence,
+          note,
+          user_id: placeholderUserId,
+        });
+
+      if (error) {
+        console.error('Error saving mood entry:', error);
+      } else {
+        console.log('Mood entry saved successfully');
+      }
+    } catch (error) {
+      console.error('Error saving mood entry:', error);
     }
   };
 
@@ -322,10 +351,44 @@ const ChatInterface = () => {
       }
       
       console.log('Successfully detected emotion:', data.emotion);
+      
+      // Save mood entry to database
+      await saveMoodEntry(data.emotion, data.confidence || 75, text);
+      
       return data.emotion;
     } catch (error) {
       console.error('Error detecting emotion:', error);
       return 'calm';
+    }
+  };
+
+  const speakText = async (text: string) => {
+    try {
+      setIsSpeaking(true);
+      
+      const { data, error } = await supabase.functions.invoke('text-to-speech', {
+        body: { text, voice: 'alloy' }
+      });
+
+      if (error) throw error;
+
+      if (data?.audioContent) {
+        // Convert base64 to audio and play
+        const audioBlob = new Blob(
+          [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
+          { type: 'audio/mpeg' }
+        );
+        const audioUrl = URL.createObjectURL(audioBlob);
+        
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl;
+          await audioRef.current.play();
+        }
+      }
+    } catch (error) {
+      console.error('Error speaking text:', error);
+    } finally {
+      setIsSpeaking(false);
     }
   };
 
@@ -352,10 +415,19 @@ const ChatInterface = () => {
         
         {!isCameraOn && (
           <>
-            <MentoraAvatar emotion={currentEmotion} isSpeaking={isLoading} />
+            <MentoraAvatar emotion={currentEmotion} isSpeaking={isLoading || isSpeaking} />
             <EmotionBubble emotion={currentEmotion} />
+            {isSpeaking && (
+              <div className="absolute bottom-32 flex items-center gap-2 text-secondary animate-pulse">
+                <Volume2 className="w-5 h-5" />
+                <span className="text-sm font-medium">Speaking...</span>
+              </div>
+            )}
           </>
         )}
+        
+        {/* Hidden audio element for TTS */}
+        <audio ref={audioRef} className="hidden" onEnded={() => setIsSpeaking(false)} />
         
         {/* Mode buttons */}
         <div className="mt-8 flex gap-4 relative z-10">
@@ -404,8 +476,8 @@ const ChatInterface = () => {
           <MessageList messages={messages} />
         </div>
 
-        {/* Input */}
-        <div className="p-6 bg-card/50 backdrop-blur-sm border-t border-border/50">
+        {/* Input - Added bottom padding to prevent navigation overlap */}
+        <div className="p-6 pb-32 bg-card/50 backdrop-blur-sm border-t border-border/50">
           <div className="flex gap-4 max-w-4xl mx-auto">
             <Input
               value={input}
