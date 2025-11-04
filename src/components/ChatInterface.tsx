@@ -352,10 +352,13 @@ const ChatInterface = () => {
       
       console.log('Successfully detected emotion:', data.emotion);
       
-      // Save mood entry to database
-      await saveMoodEntry(data.emotion, data.confidence || 75, text);
+      // Normalize emotion to lowercase for consistent matching
+      const normalizedEmotion = data.emotion.toLowerCase();
       
-      return data.emotion;
+      // Save mood entry to database
+      await saveMoodEntry(normalizedEmotion, data.confidence || 75, text);
+      
+      return normalizedEmotion;
     } catch (error) {
       console.error('Error detecting emotion:', error);
       return 'calm';
