@@ -278,7 +278,7 @@ const ChatInterface = () => {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: data.message,
-        emotion: currentEmotion,  // Keep the same emotion as detected from user
+        emotion: userEmotion,  // Use the detected emotion directly
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
