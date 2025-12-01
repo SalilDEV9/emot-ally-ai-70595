@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "./ui/card";
-import { Smile, Frown, Heart, Wind, Flame, Meh } from "lucide-react";
+import { Button } from "./ui/button";
+import { Smile, Frown, Heart, Wind, Flame, Meh, Trash2 } from "lucide-react";
+import { useToast } from "./ui/use-toast";
 
 interface MoodEntry {
   id: string;
@@ -14,6 +16,7 @@ interface MoodEntry {
 const MoodDashboard = () => {
   const [moodEntries, setMoodEntries] = useState<MoodEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadMoodEntries();
@@ -60,6 +63,29 @@ const MoodDashboard = () => {
       console.error("Error loading mood entries:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteMoodEntry = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from("mood_entries")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Entry deleted",
+        description: "Mood entry has been removed",
+      });
+    } catch (error) {
+      console.error("Error deleting mood entry:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete mood entry",
+        variant: "destructive",
+      });
     }
   };
 
@@ -158,7 +184,7 @@ const MoodDashboard = () => {
               {moodEntries.map((entry, index) => (
                 <div
                   key={entry.id}
-                  className="flex items-center gap-4 p-4 rounded-2xl bg-card/30 hover:bg-card/50 transition-all border border-border/30 animate-fade-in"
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-card/30 hover:bg-card/50 transition-all border border-border/30 animate-fade-in group"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
                   <div className={`p-3 rounded-full ${getEmotionGradient(entry.emotion)}`}>
@@ -184,6 +210,14 @@ const MoodDashboard = () => {
                       <div className="text-xs text-muted-foreground">confidence</div>
                     </div>
                   )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => deleteMoodEntry(entry.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20 hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               ))}
             </div>
