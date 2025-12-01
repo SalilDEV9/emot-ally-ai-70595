@@ -30,6 +30,7 @@ const ChatInterface = () => {
   const [currentEmotion, setCurrentEmotion] = useState("calm");
   const [isRecording, setIsRecording] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(false);
+  const [language, setLanguage] = useState<"english" | "hindi" | "maithili">("english");
   const { toast } = useToast();
   const audioRecorderRef = useRef<AudioRecorder | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -264,6 +265,7 @@ const ChatInterface = () => {
               role: m.role,
               content: m.content,
             })),
+            language,
           }),
         }
       );
@@ -408,6 +410,40 @@ const ChatInterface = () => {
 
   return (
     <div className="min-h-screen flex">
+      {/* Language Selector - Top Right */}
+      <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <button
+          onClick={() => setLanguage("english")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            language === "english"
+              ? "bg-primary text-primary-foreground shadow-glow"
+              : "bg-card/50 text-muted-foreground hover:bg-card backdrop-blur-sm"
+          }`}
+        >
+          English
+        </button>
+        <button
+          onClick={() => setLanguage("hindi")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            language === "hindi"
+              ? "bg-primary text-primary-foreground shadow-glow"
+              : "bg-card/50 text-muted-foreground hover:bg-card backdrop-blur-sm"
+          }`}
+        >
+          हिन्दी
+        </button>
+        <button
+          onClick={() => setLanguage("maithili")}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
+            language === "maithili"
+              ? "bg-primary text-primary-foreground shadow-glow"
+              : "bg-card/50 text-muted-foreground hover:bg-card backdrop-blur-sm"
+          }`}
+        >
+          मैथिली
+        </button>
+      </div>
+      
       {/* Left side - Avatar & Camera */}
       <div className="w-1/3 bg-card/30 backdrop-blur-sm border-r border-border/50 flex flex-col items-center justify-center p-8 relative">
         {isCameraOn && (

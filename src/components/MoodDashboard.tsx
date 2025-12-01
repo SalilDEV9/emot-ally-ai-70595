@@ -17,6 +17,29 @@ const MoodDashboard = () => {
 
   useEffect(() => {
     loadMoodEntries();
+    
+    // Set up realtime subscription for mood entries
+    const placeholderUserId = '00000000-0000-0000-0000-000000000000';
+    const channel = supabase
+      .channel('mood_entries_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mood_entries',
+          filter: `user_id=eq.${placeholderUserId}`,
+        },
+        () => {
+          console.log('Mood entry changed, reloading...');
+          loadMoodEntries();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadMoodEntries = async () => {
