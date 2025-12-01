@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, Mic, Video, MicOff, VideoOff, Scan, Volume2 } from "lucide-react";
+import { Send, Mic, Video, MicOff, VideoOff, Scan, Volume2, VolumeX } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import MentoraAvatar from "./MentoraAvatar";
@@ -37,6 +38,8 @@ const ChatInterface = () => {
   const videoStreamRef = useRef<MediaStream | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [volume, setVolume] = useState(1);
+  const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const handleVoiceToggle = async () => {
@@ -368,6 +371,11 @@ const ChatInterface = () => {
   };
 
   const speakText = async (text: string) => {
+    if (isMuted) {
+      console.log('Audio is muted');
+      return;
+    }
+    
     try {
       setIsSpeaking(true);
       
@@ -377,13 +385,11 @@ const ChatInterface = () => {
 
       if (error) {
         console.error('TTS error:', error);
-        // Keep speaking animation for visual feedback even if TTS fails
         setTimeout(() => setIsSpeaking(false), 2000);
         return;
       }
 
       if (data?.audioContent) {
-        // Convert base64 to audio and play
         const audioBlob = new Blob(
           [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
           { type: 'audio/mpeg' }
@@ -392,6 +398,7 @@ const ChatInterface = () => {
         
         if (audioRef.current) {
           audioRef.current.src = audioUrl;
+          audioRef.current.volume = volume;
           audioRef.current.onended = () => setIsSpeaking(false);
           audioRef.current.onerror = () => setIsSpeaking(false);
           await audioRef.current.play();
@@ -403,15 +410,50 @@ const ChatInterface = () => {
       }
     } catch (error) {
       console.error('Error speaking text:', error);
-      // Keep animation briefly even on error
       setTimeout(() => setIsSpeaking(false), 2000);
+    }
+  };
+
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    if (audioRef.current) {
+      audioRef.current.muted = !isMuted;
+    }
+  };
+
+  const handleVolumeChange = (newVolume: number[]) => {
+    const vol = newVolume[0];
+    setVolume(vol);
+    if (audioRef.current) {
+      audioRef.current.volume = vol;
     }
   };
 
   return (
     <div className="min-h-screen flex">
-      {/* Language Selector - Top Right */}
-      <div className="absolute top-4 right-4 z-50 flex gap-2">
+      {/* Controls - Top Right */}
+      <div className="absolute top-4 right-4 z-50 flex gap-2 items-center">
+        {/* Volume Controls */}
+        <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm rounded-full px-3 py-2 border border-border/50">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleMute}
+            className="h-8 w-8 hover:bg-background/50"
+          >
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </Button>
+          <Slider
+            value={[volume]}
+            onValueChange={handleVolumeChange}
+            max={1}
+            step={0.1}
+            className="w-20"
+            disabled={isMuted}
+          />
+        </div>
+        
+        {/* Language Selector */}
         <button
           onClick={() => setLanguage("english")}
           className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
