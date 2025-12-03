@@ -380,7 +380,7 @@ const ChatInterface = () => {
       setIsSpeaking(true);
       
       const { data, error } = await supabase.functions.invoke('text-to-speech', {
-        body: { text, voice: 'alloy' }
+        body: { text, language }
       });
 
       if (error) {

@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Voice mapping for different languages
+const languageVoiceMap: Record<string, string> = {
+  english: 'nova',    // Clear, warm female voice - great for English
+  hindi: 'shimmer',   // Expressive voice that works well with Hindi
+  maithili: 'shimmer' // Same for Maithili (similar to Hindi)
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -12,13 +19,16 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voice } = await req.json()
+    const { text, voice, language } = await req.json()
 
     if (!text) {
       throw new Error('Text is required')
     }
 
-    console.log('Generating speech for text length:', text.length)
+    // Select voice based on language or use provided voice
+    const selectedVoice = voice || languageVoiceMap[language] || 'nova'
+
+    console.log('Generating speech for text length:', text.length, 'language:', language, 'voice:', selectedVoice)
 
     // Generate speech from text using OpenAI TTS
     const response = await fetch('https://api.openai.com/v1/audio/speech', {
@@ -30,7 +40,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: 'tts-1',
         input: text,
-        voice: voice || 'alloy',
+        voice: selectedVoice,
         response_format: 'mp3',
       }),
     })
