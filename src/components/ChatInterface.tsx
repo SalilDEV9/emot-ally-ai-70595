@@ -10,8 +10,12 @@ import EmotionBubble from "./EmotionBubble";
 import MessageList from "./MessageList";
 import HealthReportButton from "./HealthReportButton";
 import RealTimeHealthWidget from "./RealTimeHealthWidget";
+import MusicTherapy from "./MusicTherapy";
+import HealthAdvice from "./HealthAdvice";
+import UserMenu from "./UserMenu";
 import { AudioRecorder } from "@/utils/audioRecorder";
 import { useBrowserTTS } from "@/hooks/useBrowserTTS";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
   id: string;
@@ -25,7 +29,7 @@ const ChatInterface = () => {
     {
       id: "1",
       role: "assistant",
-      content: "Hello, I'm Mentora, created by Salil. I'm here to listen and support you. How are you feeling today?",
+      content: "Hello, I'm Dr. Mentora, your AI health companion created by Salil. I'm here to support your mental and physical well-being. How can I help you today?",
       emotion: "calm",
     },
   ]);
@@ -43,6 +47,7 @@ const ChatInterface = () => {
   
   // Use browser-native TTS (free, no API key needed)
   const { speak, isSpeaking, volume, setVolume, isMuted, toggleMute } = useBrowserTTS();
+  const { user } = useAuth();
 
   const handleVoiceToggle = async () => {
     if (isRecording) {
@@ -385,6 +390,9 @@ const ChatInterface = () => {
     <div className="min-h-screen flex">
       {/* Controls - Top Right */}
       <div className="absolute top-4 right-4 z-50 flex gap-2 items-center">
+        {/* User Menu */}
+        <UserMenu />
+        
         {/* Health Report Button */}
         <HealthReportButton />
         

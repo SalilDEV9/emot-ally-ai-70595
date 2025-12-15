@@ -1,6 +1,10 @@
-const MentoraLogo = () => {
+interface MentoraLogoProps {
+  className?: string;
+}
+
+const MentoraLogo = ({ className }: MentoraLogoProps) => {
   return (
-    <div className="relative w-32 h-32 animate-breathe">
+    <div className={`relative animate-breathe ${className || 'w-32 h-32'}`}>
       {/* Outer glow ring */}
       <div className="absolute inset-0 rounded-full bg-gradient-happy opacity-30 blur-2xl animate-pulse-glow" />
       
