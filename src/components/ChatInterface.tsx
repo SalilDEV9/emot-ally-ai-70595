@@ -8,7 +8,10 @@ import { supabase } from "@/integrations/supabase/client";
 import MentoraAvatar from "./MentoraAvatar";
 import EmotionBubble from "./EmotionBubble";
 import MessageList from "./MessageList";
+import HealthReportButton from "./HealthReportButton";
+import RealTimeHealthWidget from "./RealTimeHealthWidget";
 import { AudioRecorder } from "@/utils/audioRecorder";
+import { useBrowserTTS } from "@/hooks/useBrowserTTS";
 
 interface Message {
   id: string;
@@ -22,7 +25,7 @@ const ChatInterface = () => {
     {
       id: "1",
       role: "assistant",
-      content: "Hello, I'm Mentora. I'm here to listen and support you. How are you feeling today?",
+      content: "Hello, I'm Mentora, created by Salil. I'm here to listen and support you. How are you feeling today?",
       emotion: "calm",
     },
   ]);
@@ -37,10 +40,9 @@ const ChatInterface = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [isMuted, setIsMuted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Use browser-native TTS (free, no API key needed)
+  const { speak, isSpeaking, volume, setVolume, isMuted, toggleMute } = useBrowserTTS();
 
   const handleVoiceToggle = async () => {
     if (isRecording) {
@@ -370,69 +372,22 @@ const ChatInterface = () => {
     }
   };
 
-  const speakText = async (text: string) => {
-    if (isMuted) {
-      console.log('Audio is muted');
-      return;
-    }
-    
-    try {
-      setIsSpeaking(true);
-      
-      const { data, error } = await supabase.functions.invoke('text-to-speech', {
-        body: { text, language }
-      });
-
-      if (error) {
-        console.error('TTS error:', error);
-        setTimeout(() => setIsSpeaking(false), 2000);
-        return;
-      }
-
-      if (data?.audioContent) {
-        const audioBlob = new Blob(
-          [Uint8Array.from(atob(data.audioContent), c => c.charCodeAt(0))],
-          { type: 'audio/mpeg' }
-        );
-        const audioUrl = URL.createObjectURL(audioBlob);
-        
-        if (audioRef.current) {
-          audioRef.current.src = audioUrl;
-          audioRef.current.volume = volume;
-          audioRef.current.onended = () => setIsSpeaking(false);
-          audioRef.current.onerror = () => setIsSpeaking(false);
-          await audioRef.current.play();
-        } else {
-          setIsSpeaking(false);
-        }
-      } else {
-        setIsSpeaking(false);
-      }
-    } catch (error) {
-      console.error('Error speaking text:', error);
-      setTimeout(() => setIsSpeaking(false), 2000);
-    }
-  };
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
-    if (audioRef.current) {
-      audioRef.current.muted = !isMuted;
-    }
+  // Use browser TTS to speak text (no API key needed)
+  const speakText = (text: string) => {
+    speak(text, language);
   };
 
   const handleVolumeChange = (newVolume: number[]) => {
-    const vol = newVolume[0];
-    setVolume(vol);
-    if (audioRef.current) {
-      audioRef.current.volume = vol;
-    }
+    setVolume(newVolume[0]);
   };
 
   return (
     <div className="min-h-screen flex">
       {/* Controls - Top Right */}
       <div className="absolute top-4 right-4 z-50 flex gap-2 items-center">
+        {/* Health Report Button */}
+        <HealthReportButton />
+        
         {/* Volume Controls */}
         <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm rounded-full px-3 py-2 border border-border/50">
           <Button
@@ -518,8 +473,10 @@ const ChatInterface = () => {
           </>
         )}
         
-        {/* Hidden audio element for TTS */}
-        <audio ref={audioRef} className="hidden" />
+        {/* Real-Time Health Widget */}
+        <div className="absolute bottom-4 left-4 w-64 z-10">
+          <RealTimeHealthWidget />
+        </div>
         
         {/* Mode buttons */}
         <div className="mt-8 flex gap-4 relative z-10">
