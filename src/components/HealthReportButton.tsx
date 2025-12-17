@@ -58,6 +58,16 @@ const HealthReportButton = () => {
 
       const entries: MoodEntry[] = moodEntries || [];
       
+      if (entries.length === 0) {
+        toast({
+          title: 'No Data Available',
+          description: 'Start a conversation with Dr. Mentora while logged in to track your mood and generate reports.',
+          variant: 'destructive',
+        });
+        setIsGenerating(false);
+        return;
+      }
+      
       // Calculate statistics
       const emotionBreakdown = entries.reduce((acc, entry) => {
         const emotion = entry.emotion.toLowerCase();

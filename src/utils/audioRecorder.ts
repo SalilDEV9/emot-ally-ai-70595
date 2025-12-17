@@ -5,17 +5,32 @@ export class AudioRecorder {
 
   async start(): Promise<void> {
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.mediaRecorder = new MediaRecorder(this.stream);
+      this.stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 16000,
+        } 
+      });
+      
+      // Try to use webm/opus first, fallback to webm
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus' 
+        : 'audio/webm';
+      
+      this.mediaRecorder = new MediaRecorder(this.stream, { mimeType });
       this.audioChunks = [];
 
       this.mediaRecorder.ondataavailable = (event) => {
+        console.log('Audio chunk received:', event.data.size, 'bytes');
         if (event.data.size > 0) {
           this.audioChunks.push(event.data);
         }
       };
 
-      this.mediaRecorder.start();
+      // Use timeslice to ensure we get data chunks during recording
+      this.mediaRecorder.start(1000);
+      console.log('Recording started with mimeType:', mimeType);
     } catch (error) {
       console.error('Error starting audio recording:', error);
       throw error;
@@ -30,7 +45,16 @@ export class AudioRecorder {
       }
 
       this.mediaRecorder.onstop = async () => {
+        console.log('Recording stopped, total chunks:', this.audioChunks.length);
+        
+        if (this.audioChunks.length === 0) {
+          reject(new Error('No audio data recorded'));
+          return;
+        }
+        
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
+        console.log('Audio blob size:', audioBlob.size, 'bytes');
+        
         const base64Audio = await this.blobToBase64(audioBlob);
         
         if (this.stream) {
@@ -51,6 +75,7 @@ export class AudioRecorder {
       reader.onloadend = () => {
         const base64String = reader.result as string;
         const base64Data = base64String.split(',')[1];
+        console.log('Base64 audio length:', base64Data?.length || 0);
         resolve(base64Data);
       };
       reader.onerror = reject;
