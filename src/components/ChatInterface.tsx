@@ -52,16 +52,29 @@ const ChatInterface = () => {
   const handleVoiceToggle = async () => {
     if (isRecording) {
       try {
+        console.log('Stopping recording...');
         const base64Audio = await audioRecorderRef.current?.stop();
         setIsRecording(false);
         
         if (base64Audio) {
+          console.log('Audio captured, base64 length:', base64Audio.length);
           setIsLoading(true);
+          
+          toast({
+            title: "Processing Audio",
+            description: "Converting your speech to text...",
+          });
+          
           const { data, error } = await supabase.functions.invoke('voice-to-text', {
             body: { audio: base64Audio }
           });
 
-          if (error) throw error;
+          console.log('Voice-to-text response:', { data, error });
+
+          if (error) {
+            console.error('Voice-to-text error:', error);
+            throw error;
+          }
           
           if (data?.text) {
             setInput(data.text);
@@ -69,13 +82,27 @@ const ChatInterface = () => {
               title: "Transcription Complete",
               description: "Your voice has been converted to text",
             });
+          } else if (data?.error) {
+            throw new Error(data.error);
+          } else {
+            toast({
+              title: "No Speech Detected",
+              description: "Please try speaking more clearly",
+              variant: "destructive",
+            });
           }
+        } else {
+          toast({
+            title: "Recording Issue",
+            description: "No audio was captured. Please try again.",
+            variant: "destructive",
+          });
         }
       } catch (error) {
         console.error('Error transcribing audio:', error);
         toast({
           title: "Transcription Error",
-          description: "Failed to convert voice to text",
+          description: error instanceof Error ? error.message : "Failed to convert voice to text",
           variant: "destructive",
         });
       } finally {
@@ -83,18 +110,19 @@ const ChatInterface = () => {
       }
     } else {
       try {
+        console.log('Starting recording...');
         audioRecorderRef.current = new AudioRecorder();
         await audioRecorderRef.current.start();
         setIsRecording(true);
         toast({
           title: "Recording Started",
-          description: "Speak now - click again to transcribe",
+          description: "Speak now - click again to stop and transcribe",
         });
       } catch (error) {
         console.error('Error starting recording:', error);
         toast({
-          title: "Recording Error",
-          description: "Could not access microphone",
+          title: "Microphone Error",
+          description: "Could not access microphone. Please allow microphone permissions.",
           variant: "destructive",
         });
       }
@@ -313,8 +341,8 @@ const ChatInterface = () => {
     try {
       // Only save mood entries for authenticated users
       if (!user?.id) {
-        console.log('User not authenticated, skipping mood entry save');
-        return;
+        console.log('User not authenticated, skipping mood entry save - please log in to track mood history');
+        return false;
       }
       
       const { error } = await supabase
@@ -322,17 +350,20 @@ const ChatInterface = () => {
         .insert({
           emotion,
           confidence,
-          note,
+          note: note.substring(0, 500), // Limit note length for storage
           user_id: user.id,
         });
 
       if (error) {
         console.error('Error saving mood entry:', error);
+        return false;
       } else {
-        console.log('Mood entry saved successfully for user:', user.id);
+        console.log('Mood entry saved successfully for user:', user.id, 'emotion:', emotion);
+        return true;
       }
     } catch (error) {
       console.error('Error saving mood entry:', error);
+      return false;
     }
   };
 
