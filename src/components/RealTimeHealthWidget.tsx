@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card } from './ui/card';
 import { Activity, Heart, Brain, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface HealthMetrics {
   currentEmotion: string;
@@ -12,6 +13,7 @@ interface HealthMetrics {
 }
 
 const RealTimeHealthWidget = () => {
+  const { user } = useAuth();
   const [metrics, setMetrics] = useState<HealthMetrics>({
     currentEmotion: 'calm',
     emotionalStability: 75,
@@ -22,10 +24,11 @@ const RealTimeHealthWidget = () => {
   const [isLive, setIsLive] = useState(true);
 
   useEffect(() => {
+    if (!user?.id) return;
+    
     loadMetrics();
     
     // Set up real-time subscription
-    const placeholderUserId = '00000000-0000-0000-0000-000000000000';
     const channel = supabase
       .channel('realtime_health')
       .on(
@@ -34,7 +37,7 @@ const RealTimeHealthWidget = () => {
           event: '*',
           schema: 'public',
           table: 'mood_entries',
-          filter: `user_id=eq.${placeholderUserId}`,
+          filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
           console.log('Real-time health update:', payload);
@@ -55,16 +58,16 @@ const RealTimeHealthWidget = () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, []);
+  }, [user?.id]);
 
   const loadMetrics = async () => {
     try {
-      const placeholderUserId = '00000000-0000-0000-0000-000000000000';
+      if (!user?.id) return;
       
       const { data: entries, error } = await supabase
         .from('mood_entries')
         .select('*')
-        .eq('user_id', placeholderUserId)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(20);
 

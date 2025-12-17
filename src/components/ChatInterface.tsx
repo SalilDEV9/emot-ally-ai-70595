@@ -311,8 +311,11 @@ const ChatInterface = () => {
 
   const saveMoodEntry = async (emotion: string, confidence: number, note: string) => {
     try {
-      // Use a placeholder user_id since auth is not implemented yet
-      const placeholderUserId = '00000000-0000-0000-0000-000000000000';
+      // Only save mood entries for authenticated users
+      if (!user?.id) {
+        console.log('User not authenticated, skipping mood entry save');
+        return;
+      }
       
       const { error } = await supabase
         .from('mood_entries')
@@ -320,13 +323,13 @@ const ChatInterface = () => {
           emotion,
           confidence,
           note,
-          user_id: placeholderUserId,
+          user_id: user.id,
         });
 
       if (error) {
         console.error('Error saving mood entry:', error);
       } else {
-        console.log('Mood entry saved successfully');
+        console.log('Mood entry saved successfully for user:', user.id);
       }
     } catch (error) {
       console.error('Error saving mood entry:', error);
@@ -526,7 +529,7 @@ const ChatInterface = () => {
         </div>
       </div>
 
-      {/* Right side - Chat */}
+      {/* Center - Chat */}
       <div className="flex-1 flex flex-col">
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6">
@@ -554,6 +557,12 @@ const ChatInterface = () => {
             </Button>
           </div>
         </div>
+      </div>
+      
+      {/* Right side - Music & Health Panels */}
+      <div className="w-80 bg-card/30 backdrop-blur-sm border-l border-border/50 flex flex-col gap-4 p-4 overflow-y-auto">
+        <MusicTherapy currentEmotion={currentEmotion} />
+        <HealthAdvice currentEmotion={currentEmotion} />
       </div>
     </div>
   );
