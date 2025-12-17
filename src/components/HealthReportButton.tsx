@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 import { useToast } from './ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { generateHealthReport, getRecommendations } from '@/utils/healthReportPDF';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MoodEntry {
   id: string;
@@ -21,6 +22,7 @@ const HealthReportButton = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [patientName, setPatientName] = useState('');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleGenerateReport = async () => {
     if (!patientName.trim()) {
@@ -32,15 +34,23 @@ const HealthReportButton = () => {
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        title: 'Login Required',
+        description: 'Please log in to generate a health report.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsGenerating(true);
 
     try {
-      // Fetch mood entries
-      const placeholderUserId = '00000000-0000-0000-0000-000000000000';
+      // Fetch mood entries for authenticated user
       const { data: moodEntries, error } = await supabase
         .from('mood_entries')
         .select('*')
-        .eq('user_id', placeholderUserId)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100);
 
