@@ -13,7 +13,7 @@ import RealTimeHealthWidget from "./RealTimeHealthWidget";
 import MusicTherapy from "./MusicTherapy";
 import HealthAdvice from "./HealthAdvice";
 import UserMenu from "./UserMenu";
-import { AudioRecorder } from "@/utils/audioRecorder";
+import { SpeechRecognizer, getRecognitionLang } from "@/utils/speechRecognition";
 import { useBrowserTTS } from "@/hooks/useBrowserTTS";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -40,7 +40,7 @@ const ChatInterface = () => {
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [language, setLanguage] = useState<"english" | "hindi" | "maithili">("english");
   const { toast } = useToast();
-  const audioRecorderRef = useRef<AudioRecorder | null>(null);
+  const speechRecognizerRef = useRef<SpeechRecognizer | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -52,77 +52,47 @@ const ChatInterface = () => {
   const handleVoiceToggle = async () => {
     if (isRecording) {
       try {
-        console.log('Stopping recording...');
-        const base64Audio = await audioRecorderRef.current?.stop();
+        console.log('Stopping speech recognition...');
+        speechRecognizerRef.current?.stop();
         setIsRecording(false);
-        
-        if (base64Audio) {
-          console.log('Audio captured, base64 length:', base64Audio.length);
-          setIsLoading(true);
-          
+        // The promise from start() will resolve with the transcript
+      } catch (error) {
+        console.error('Error stopping recognition:', error);
+        setIsRecording(false);
+      }
+    } else {
+      try {
+        console.log('Starting speech recognition...');
+        speechRecognizerRef.current = new SpeechRecognizer();
+        setIsRecording(true);
+        toast({
+          title: "Listening...",
+          description: "Speak now — click mic again to stop",
+        });
+
+        const lang = getRecognitionLang(language);
+        const transcript = await speechRecognizerRef.current.start(lang);
+        setIsRecording(false);
+
+        if (transcript) {
+          setInput(transcript);
           toast({
-            title: "Processing Audio",
-            description: "Converting your speech to text...",
+            title: "Got it!",
+            description: "Your speech has been captured",
           });
-          
-          const { data, error } = await supabase.functions.invoke('voice-to-text', {
-            body: { audio: base64Audio }
-          });
-
-          console.log('Voice-to-text response:', { data, error });
-
-          if (error) {
-            console.error('Voice-to-text error:', error);
-            throw error;
-          }
-          
-          if (data?.text) {
-            setInput(data.text);
-            toast({
-              title: "Transcription Complete",
-              description: "Your voice has been converted to text",
-            });
-          } else if (data?.error) {
-            throw new Error(data.error);
-          } else {
-            toast({
-              title: "No Speech Detected",
-              description: "Please try speaking more clearly",
-              variant: "destructive",
-            });
-          }
         } else {
           toast({
-            title: "Recording Issue",
-            description: "No audio was captured. Please try again.",
+            title: "No Speech Detected",
+            description: "Please try speaking more clearly",
             variant: "destructive",
           });
         }
       } catch (error) {
-        console.error('Error transcribing audio:', error);
+        console.error('Speech recognition error:', error);
+        setIsRecording(false);
         toast({
-          title: "Transcription Error",
-          description: error instanceof Error ? error.message : "Failed to convert voice to text",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      try {
-        console.log('Starting recording...');
-        audioRecorderRef.current = new AudioRecorder();
-        await audioRecorderRef.current.start();
-        setIsRecording(true);
-        toast({
-          title: "Recording Started",
-          description: "Speak now - click again to stop and transcribe",
-        });
-      } catch (error) {
-        console.error('Error starting recording:', error);
-        toast({
-          title: "Microphone Error",
-          description: "Could not access microphone. Please allow microphone permissions.",
+          title: "Speech Recognition Error",
+          description: error instanceof Error ? error.message : "Failed to recognize speech",
           variant: "destructive",
         });
       }
